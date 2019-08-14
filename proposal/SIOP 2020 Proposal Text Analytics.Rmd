@@ -1,0 +1,50 @@
+---
+title: "README"
+author: "Steven W. Nydick"
+date: "8/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is simply a scratch document to get an idea of the text analytics presentation.
+See https://CRAN.R-project.org/view=NaturalLanguageProcessing. For additional
+information and other packages.
+
+The following packages might be useful:
+
+1. `tm` (for general text mining and a comprehensive framework).
+    a. https://cran.r-project.org/web/packages/tm/vignettes/tm.pdf
+    b. `tm_map` for data cleaning, including converting to lower case, removing
+       stopwords, and stemming.
+    c. `VCorpus(VectorSource(x))` for creating a corpus.
+    d. `inspect` for inspecting corpuses.
+    e. `DocumentTermMatrix` for creating document term matrices useful for other
+       outputs.
+2. `corpus` for corpus objects.
+    a. https://cran.r-project.org/web/packages/corpus/vignettes/corpus.html
+    b. `corpus_frame` to put into a "corpus" data.frame.
+    c. `text_tokens` and `text_filter` for tokenization (where you can change
+       `text_filter` by assignment to update how things are tokenized).
+3. `tidytext` for tidy text mining.
+    a. https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html
+    b. `unnest_tokens` uses the `tokenizers` package to put tokens on
+       individual rows.
+    c. `get_sentiments` to get sentiments of individual words.
+4. `wordcloud` and `wordcloud2`.
+    a. Creating wordclouds.
+    b. The second one can do fancy shapes and letters.
+5. `SnowballC` has information for stemming text.
+6. `syuzhet` for text sentiment analysis (not just positive and negative but
+    classification based on type of sentiment).
+7. `quanteda` for corpus and text analysis.
+    a. `corpus` for turning text data into a corpus.
+    b. `summary` for showing a summary of corpus.
+    c. `metadata` and `docvars` to change properties of corpus objects.
+    d. `kwic` to explore corpus text in the context of the full sentence.
+    e. `tokens` to update tokens and show tokens by certain properties
+    f. Can update stopwords by different languages
+8. `RKEA` for "keyword extraction analysis"
+9. `RWeka` for machine learning algorithms for data mining
