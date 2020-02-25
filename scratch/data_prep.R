@@ -6,31 +6,31 @@ setwd('~/Desktop/Projects/Active/SIOP/2020/siop-2020-text-mining-and-nlp')
 
 library(magrittr)
 
-data_original <- read.csv('data/siop_2020_txt_lo-wide.csv')
+# data_original <- read.csv('data/siop_2020_txt_lo-wide.csv')
 
-text_pro <- data_original$txt_pro %>%
-            gsub(pattern     = 'Pros</b><br/>', 
-                 replacement = '', 
-                 x           = .) %>%
-            data.frame(Text = ., 
-                       Pro  = 1)
+# text_pro <- data_original$txt_pro %>%
+#             gsub(pattern     = 'Pros</b><br/>', 
+#                  replacement = '', 
+#                  x           = .) %>%
+#             data.frame(Text = ., 
+#                        Pro  = 1)
 
-text_con <- data_original$txt_con %>%
-            gsub(pattern     = 'Cons</b><br/>', 
-                 replacement = '', 
-                 x           = .) %>%
-            gsub(pattern     = '<br/><br/>', 
-                 replacement = '', 
-                 x           = .) %>%
-            data.frame(Text = ., 
-                       Pro  = 0)
+# text_con <- data_original$txt_con %>%
+#             gsub(pattern     = 'Cons</b><br/>', 
+#                  replacement = '', 
+#                  x           = .) %>%
+#             gsub(pattern     = '<br/><br/>', 
+#                  replacement = '', 
+#                  x           = .) %>%
+#             data.frame(Text = ., 
+#                        Pro  = 0)
 
-# combine
-text_dat <- rbind(text_pro, text_con)
+# # combine
+# text_dat <- rbind(text_pro, text_con)
 
-write.csv(x         = text_dat, 
-          file      = 'data/text_plus_pro_con.csv', 
-          row.names = FALSE)
+# write.csv(x         = text_dat, 
+#           file      = 'data/text_plus_pro_con.csv', 
+#           row.names = FALSE)
 
 
 # not sure if we want the above as part of the tutorial, or if we should just
@@ -45,6 +45,8 @@ library(tm)
 
 # VectorSource - tells R to treat each element as if it were a document
 # SimpleCorpus - function that turns the text in to corpora
+
+text_dat    <- read.csv('data/text_plus_pro_con.csv')
 
 text_corpus <- VectorSource(text_dat$Text) %>%
                SimpleCorpus()
@@ -111,6 +113,37 @@ text_total_freq <- colSums(as.matrix(text_dtm)) %>%
                    .[order(.$count, decreasing = TRUE), , drop = FALSE]
 
 head(text_total_freq)
+
+#
+# Sentiment Analysis
+library(SentimentAnalysis)
+
+# Using the Harvard-IV dictionary (General Inquirer) 
+# which is a dictionary of words associated with positive (1,915 words) or 
+# negative (2,291 words) sentiment.
+text_sent <- analyzeSentiment(text_dtm, language = "english")
+
+head(text_sent[, 1:4])
+
+# were going to just select the Harvard-IV dictionary results ..  
+sent <- sent[,1:4]
+#Organizing it as a dataframe
+sent <- as.data.frame(sent)
+# Now lets take a look at what these sentiment values look like. 
+head(sent)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
