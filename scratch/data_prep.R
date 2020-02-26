@@ -49,7 +49,7 @@ library(tm)
 text_dat    <- read.csv('data/text_plus_pro_con.csv')
 
 text_corpus <- VectorSource(text_dat$Text) %>%
-               SimpleCorpus()
+               VCorpus()
 
 
 # inspecting the first element
@@ -121,16 +121,114 @@ library(SentimentAnalysis)
 # Using the Harvard-IV dictionary (General Inquirer) 
 # which is a dictionary of words associated with positive (1,915 words) or 
 # negative (2,291 words) sentiment.
-text_sent <- analyzeSentiment(text_dtm, language = "english")
-
-head(text_sent[, 1:4])
+# this next line takes 1-2 mins to run... we will run on a subset
+# text_sent <- analyzeSentiment(text_dtm, language = "english")
+text_sent <- analyzeSentiment(text_dtm[1:1000, ], language = "english")
 
 # were going to just select the Harvard-IV dictionary results ..  
-sent <- sent[,1:4]
-#Organizing it as a dataframe
-sent <- as.data.frame(sent)
-# Now lets take a look at what these sentiment values look like. 
-head(sent)
+# there are other dictionaries used for sentiment as well
+# type ?DictionaryHE and ?DictionaryLM for details on other dictionaries
+text_sent %<>% .[, 1:4] %>%
+               as.data.frame()
+
+# here we see four variables:
+#   * WordCount - number of words in the corpus / string of text
+#   * SentimentGI - overall sentiment (positive - negative)
+#   * NegativityGI - negative sentiment; higher = more negative
+#   * PositivityGI - positive sentiment; higher = more positive
+head(text_sent)
+
+summary(text_sent$SentimentGI)
+
+# look at the most positive corpora
+positive_order <- order(text_sent$SentimentGI, decreasing = TRUE)
+text_dat[positive_order[1:5], ]
+
+# Emotional word categorization using NRC emotion lexicon. For details
+# see: http://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm
+# the NRC emotion lexicon associates words with 8 emotions: anger, fear, 
+# anticipation, trust, surprise, sadness, joy, and disgust (as well as
+# negative and positive sentiment)
+library(syuzhet)
+
+# running this next line of code takes like 4ish minutes... so we will run
+# the nrc function on a subset of the data
+# text_emot <- get_nrc_sentiment(char_v = text_dat$Text)
+text_emot <- get_nrc_sentiment(char_v = text_dat$Text[1:1000])
+
+# inpsecting the data, we see a column per emtion and sentiment; the number
+# is a count. For example, there are 2 words in sentence 3 that are associated
+# with the emotion Trust
+head(text_emot)
+
+# seems that trust is the dominant emotion in these comments
+colSums(text_emot)
+
+
+# Basic predictive modeling setup
+# bag of words approach and n-gram approach
+
+# Bag of words approach basically ignores sentence grammer, word order, etc. 
+# How we have set up our data thus far is inline w/ the bag of words approach.
+# We have created Term Frequency matrix - often times for modeling, we create 
+# something called the Term Frequency - Inverse Document Frequency Matrix. This
+# matrix weights Term Frequency by how prevalent they are in the corpora (
+# text strings). If the word shows up often in and across the documents - they 
+# get less weight (for example stop words - however we have already removed
+# these). A good overview can be found at: http://www.tfidf.com/
+text_tfidf <- DocumentTermMatrix(x       = text_corpus, 
+                                 control = list(weighting = weightTfIdf)) %>%
+              as.matrix()
+
+
+# you could run this whole model - but it takes some time.. we will run a 
+# smaller one as an example
+# mod_data_1 <- data.frame(text_tfidf, y = text_dat$Pro)
+# summary(glm(y ~ ., data = mod_data_1))
+mod_data_1 <- data.frame(text_tfidf[, 1:50], y = text_dat$Pro)
+mod_1      <- glm(y ~ ., data = mod_data_1)
+
+summary(mod_1)
+
+# n-gram
+# the previous approach looked at words independtly of other words w/in a text
+# string. N-grams allow you to create pair; triplets; etc representations of 
+# words. So for example, if we had the sentence:
+#   - "Great developer of people, managers allowed discretion"
+# a 2-gram representation (tokenization) would be:
+#   - Great developer, developer of, of people, people managers, 
+#     managers allowed, allowed discretion
+# a 3-gram representation would b:
+#   - Great developer of, developer of people, of people managers,
+#     people managers allowed, managers allowed discretion
+# etc.
+
+# we will create a custom Tokenizer function to pass to tm's functions
+ngram_tokenizer <- function(x, n) {
+  # turn a text string (corpus) into a vector of words
+  text_words <- words(x)
+  # create a n-gram representation of the vector of words
+  text_gram  <- ngrams(text_words, n = n)
+  # format the text_gram in a way that the tm package functions can process
+  out        <- lapply(text_gram, paste, collapse = ' ') %>%
+                unlist()
+
+  return(out)
+}
+
+bigram  <- function(x) ngram_tokenizer(x, n = 2)
+trigram <- function(x) ngram_tokenizer(x, n = 3)
+
+# shrink the size of the text corpus object - for demo only
+# running this on all the data may cause an error due to memory limits. 
+text_corpus_shrunk <- text_corpus[1:1000]
+
+bigram_tfidf <- DocumentTermMatrix(x       = text_corpus_shrunk, 
+                                   control = list(tokenize  = bigram,
+                                                  weighting = weightTfIdf)) %>%
+                as.matrix()
+
+bigram_tfidf[1:10, 1:5]
 
 
 
