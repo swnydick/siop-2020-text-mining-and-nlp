@@ -39,6 +39,7 @@ library(magrittr)
 
 
 library(tm)
+library(magrittr)
 
 # create a corpus per row of text in the data. a corpus is a format for storing
 # text data.. often contains meta information (but doesn't have too)
@@ -81,6 +82,12 @@ text_corpus %<>% tm_map(removeWords, stopwords('english'))
 # stripping any additional white space - multiple whitespace characters are 
 # collapsed to a single blank.
 text_corpus %<>% tm_map(stripWhitespace)
+
+# create a dictionary of the text_corpus before stemming so that we can
+# reconstruct the first version of the words - if we don't take the words out
+# of the corpus, completing the stem words will not take into consideration
+# how often the words appear inthe corpus.
+text_dict     <- unlist(lapply(text_corpus, words))
 
 # stemming. Stemming is the process of transforming words to a common root. For
 # example, 'likes', 'liked', 'likely', and 'liking' will all be transformed to 
@@ -229,23 +236,3 @@ bigram_tfidf <- DocumentTermMatrix(x       = text_corpus_shrunk,
                 as.matrix()
 
 bigram_tfidf[1:10, 1:5]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
