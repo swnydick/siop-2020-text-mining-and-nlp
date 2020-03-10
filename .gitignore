@@ -94,6 +94,3 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
-
-# Large files!
-data/wiki-news-300d-1M.vec
