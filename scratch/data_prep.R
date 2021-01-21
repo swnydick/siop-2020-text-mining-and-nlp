@@ -2,7 +2,7 @@
 rm(list = ls())
 options(stringsAsFactors = FALSE)
 
-setwd('~/Desktop/Projects/Active/SIOP/2020/siop-2020-text-mining-and-nlp')
+setwd('~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp')
 
 library(magrittr)
 
@@ -193,7 +193,7 @@ text_tfidf <- DocumentTermMatrix(x       = text_corpus,
 # mod_data_1 <- data.frame(text_tfidf, y = text_dat$Pro)
 # summary(glm(y ~ ., data = mod_data_1))
 mod_data_1 <- data.frame(text_tfidf[, 1:50], y = text_dat$Pro)
-mod_1      <- glm(y ~ ., data = mod_data_1)
+mod_1      <- glm(y ~ ., data = mod_data_1, family = 'binomial')
 
 summary(mod_1)
 
