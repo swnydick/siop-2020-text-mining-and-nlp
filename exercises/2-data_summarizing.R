@@ -1,9 +1,15 @@
-##################
-# Data Summaries #
-##################
+#########################################
+# NLP Data Summarizing                  #
+#                                       #
+# Korn Ferry Institute: Automation Team #
+# 2021-04-15                            #
+#########################################
+
+# 1. Setup / Required Packages =================================================
 
 # Make sure to have objects from data_prep.R loaded for this section. We will
 # use the following packages
+library(tm)
 library(wordcloud)
 library(wordcloud2)
 library(tidytext)
@@ -11,20 +17,26 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
+# get project directory (SPECIFY MANUALLY???)
+setwd(proj_dir)
+analyses_dir <- file.path(proj_dir, "exercises")
+
+# 2. Wordclouds ================================================================
+
 # Using the above we can start building displays of the data.
 
 # If we have a frequence data.frame (with words on the rows and a single column
 # of counts, we can plot a simple word.cloud.
-
-wordcloud_colors       <- c("#339966", "#3399CC", "#CC6600", "#660066", "#990000", "#FFCC00",
-                            "#CE4040", "#98C7FF", "#FFC80A", "#7AB0C2", "#3A456A")
+wordcloud_colors       <- c("#339966", "#3399CC", "#CC6600", "#660066", "#990000",
+                            "#FFCC00", "#CE4040", "#98C7FF", "#FFC80A", "#7AB0C2",
+                            "#3A456A")
 
 # The oldest wordcloud package in R can display a simple circle wordcloud
-# (as well as comparison word clouds) - let's take the top 200 words or this
-# count take a while.
+# (as well as comparison word clouds) - let's take a subset of words (or it
+# will take a while)
 text_total_freq_part   <- text_total_freq[1:400, , drop = FALSE]
 
-# BASIC WORD CLOUDS #
+#   2a. Basic Wordclouds -------------------------------------------------------
 
 # completing the stems so that the words are actual words that show up in the
 # document rather than stemmed/partial words.
@@ -32,6 +44,7 @@ text_total_freq_part %<>% mutate(
   word = stemCompletion(x          = rownames(.),
                         dictionary = text_dict)
 )
+
 wordcloud(words        = text_total_freq_part$word,
           freq         = text_total_freq_part$count,
           min.freq     = 10,
@@ -71,7 +84,7 @@ wordcloud2(data        = text_total_freq_part2,
            minRotation = -pi/4,
            maxRotation = +pi/4,
            rotateRatio = .3,
-           figPath     = file.path("scratch", "man-standing.png"))
+           figPath     = file.path(basename(analyses_dir), "man-standing.png"))
 
 # OR letters
 letterCloud(data        = text_total_freq_part2,
@@ -86,7 +99,9 @@ letterCloud(data        = text_total_freq_part2,
 # - You can choose multiple letters for letter cloud, but sometimes it will not
 #   include really big letters (for some odd reason)
 
-# SENTIMENT-BASED WORDCLOUDS #
+# Note: doesn't seem to work right now ... in RStudio OR R.
+
+#   2b. Sentiment-based Wordclouds ---------------------------------------------
 
 # tidytext has a function to pull sentiments out for individual words, which we
 # can use the summarize the data
@@ -95,10 +110,10 @@ letterCloud(data        = text_total_freq_part2,
 # (next lines take several minutes to run, so will read in file already processed)
 # text_total_freq_all   <- text_total_freq
 # text_total_freq_all %<>% mutate(
-#   word  = stemCompletion(x        = rownames(.),
+#   word  = stemCompletion(x          = rownames(.),
 #                          dictionary = text_dict)
 # )
-text_total_freq_all <- readRDS(file.path("scratch", "text_total_frequencies.Rdata"))
+text_total_freq_all <- readRDS(file.path(analyses_dir, "text_total_frequencies.Rdata"))
 sentiments          <- get_sentiments(lexicon = "bing")
 
 # - merge word_frequencies with sentiment lists
@@ -108,8 +123,8 @@ text_total_freq_all <- merge(x     = text_total_freq_all,
                              y     = sentiments,
                              by    = "word") %>%
                        group_by(word, sentiment) %>%
-                       summarize_at(.vars = "count",
-                                    .funs = sum) %>%
+                       summarize(across(.cols = "count",
+                                        .fns  = sum)) %>%
                        filter(sentiment %in% c("negative", "positive"))
 
 # we could plot top ten negative and positive words
@@ -139,7 +154,7 @@ top_ten_sent_plot <- ggplot(data    = top_ten_sent,
                      theme_bw()
 top_ten_sent_plot
 
-# you can try the above code with a different sentiment dictionary (like bing)
+# you can try the above code with a different sentiment dictionary (like afinn)
 
 # we can actually create a sentiment based wordcloud as well
 dtm_sentiment      <- text_total_freq_all %>%
@@ -161,10 +176,10 @@ comparison.cloud(term.matrix  = dtm_sentiment,
 # - Remove the "filter" (plus the previous %>%) from text_total_freq_all
 # This will plot ALL sentiments and not JUST the positve/negative ones!
 
-# TYPE-BASED WORDCLOUDS #
+#   2c. Type-based Wordclouds --------------------------------------------------
 
 # One thing that might be interesting is to see the most common words of the
-# "pros" and "cons" data
+# "pros" and "cons" data:
 # - split the text_corpus into "pros" and "cons"
 # - create a DTM on each text corpus
 # - use the DTM to create a total_freq df
@@ -205,8 +220,8 @@ text_total_freq_type %<>% mutate(
 
 # - combining different stems together
 text_total_freq_type %<>% group_by(type, word) %>%
-                          summarize_at(.vars = "count",
-                                       .funs = sum) %>%
+                          summarize(across(.cols = "count",
+                                           .fns  = sum)) %>%
                           ungroup()
 
 # - reshaping and creating rownames
@@ -225,7 +240,7 @@ comparison.cloud(term.matrix  = dtm_type,
                  title.size   = 3,
                  match.colors = TRUE)
 
-# OVERALL SENTIMENT PLOTS #
+#   2d. Overall Sentiment Plots ------------------------------------------------
 
 # we can make a plot of the text sentiment across the diffferent text
 
