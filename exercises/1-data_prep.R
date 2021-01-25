@@ -1,54 +1,75 @@
+#########################################
+# NLP Data Preparation                  #
+#                                       #
+# Korn Ferry Institute: Automation Team #
+# 2021-04-15                            #
+#########################################
 
-rm(list = ls())
-options(stringsAsFactors = FALSE)
+# 1. Setup / Required Packages =================================================
 
-setwd('~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp')
+# repo to use
+options(repos = "https://cran.rstudio.com/")
 
+# can also set other options here, like stringsAsFactors = FALSE
+rm(list = ls())                   # not always ideal
+options(stringsAsFactors = FALSE) # not needed in R 4.0
+
+# required packages for data parsing
+library(tm)
+library(SentimentAnalysis)
+library(syuzhet)
 library(magrittr)
 
-# data_original <- read.csv('data/siop_2020_txt_lo-wide.csv')
+# 2. Loading Data ==============================================================
 
-# text_pro <- data_original$txt_pro %>%
-#             gsub(pattern     = 'Pros</b><br/>', 
-#                  replacement = '', 
-#                  x           = .) %>%
-#             data.frame(Text = ., 
-#                        Pro  = 1)
+# get project directory (SPECIFY MANUALLY???)
+proj_dir      <-"~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp"
+data_dir      <- file.path(proj_dir, "data")
 
-# text_con <- data_original$txt_con %>%
-#             gsub(pattern     = 'Cons</b><br/>', 
-#                  replacement = '', 
-#                  x           = .) %>%
-#             gsub(pattern     = '<br/><br/>', 
-#                  replacement = '', 
-#                  x           = .) %>%
-#             data.frame(Text = ., 
-#                        Pro  = 0)
-
-# # combine
-# text_dat <- rbind(text_pro, text_con)
-
-# write.csv(x         = text_dat, 
-#           file      = 'data/text_plus_pro_con.csv', 
-#           row.names = FALSE)
-
-
-# not sure if we want the above as part of the tutorial, or if we should just
+# NOT REQUIRED: UNCOMMENT TO RUN #
+# not sure if we want this as part of the tutorial, or if we should just
 # have the data ready to go like that... leaving it up there for us to decide
 # if we have enough time i suppose
 
+# # read data into R
+# data_original <- read.csv(file.path(data_dir, "siop_2020_txt_lo-wide.csv"))
+# 
+# # parse pro column and remove "Pros" heading text
+# text_pro      <- data_original$txt_pro %>%
+#                  gsub(pattern     = "Pros</b><br/>",
+#                       replacement = "",
+#                       x           = .) %>%
+#                  data.frame(Text = .,
+#                             Pro  = 1)
+# 
+# # parse con column and remove "Cons" heading text
+# text_con      <- data_original$txt_con %>%
+#                  gsub(pattern     = "Cons</b><br/>",
+#                       replacement = "",
+#                       x           = .) %>%
+#                  gsub(pattern     = "<br/><br/>",
+#                       replacement = "",
+#                       x           = .) %>%
+#                  data.frame(Text = .,
+#                             Pro  = 0)
+# 
+# # combine
+# text_dat     <- rbind(text_pro, text_con)
+# 
+# write.csv(x         = text_dat,
+#           file      = file.path(data_dirm, "text_plus_pro_con.csv"),
+#           row.names = FALSE)
 
-library(tm)
-library(magrittr)
+# read processed data into R (if NOT running above code)
+text_dat    <- read.csv(file.path(data_dir, "text_plus_pro_con.csv"))
+
+# 3. Creating Corpus ===========================================================
 
 # create a corpus per row of text in the data. a corpus is a format for storing
 # text data.. often contains meta information (but doesn't have too)
 
 # VectorSource - tells R to treat each element as if it were a document
 # SimpleCorpus - function that turns the text in to corpora
-
-text_dat    <- read.csv('data/text_plus_pro_con.csv')
-
 text_corpus <- VectorSource(text_dat$Text) %>%
                VCorpus()
 
@@ -58,9 +79,10 @@ text_corpus <- VectorSource(text_dat$Text) %>%
 # $content - shows the text
 # $meta    - shows the meta data (if any exists)
 
-text_corpus[['1']]$content
-text_corpus[['1']]$meta
+text_corpus[["1"]]$content
+text_corpus[["1"]]$meta
 
+# 4. Cleaning Corpus Data ======================================================
 
 # now that we have our data in format that is useable by tm (and other packages),
 # we will start to clean the data and do a little pre-processing
@@ -71,13 +93,13 @@ text_corpus %<>% tm_map(content_transformer(tolower))
 # remove numbers from the text
 text_corpus %<>% tm_map(removeNumbers)
 
-# remove punctuation
+# remove punctuation (can sometimes be useful, but depends on context)
 text_corpus %<>% tm_map(removePunctuation)
 
 # remove stop words. stop words are basically words that are of little value..
 # e.g., 'a', 'the', 'I', 'me', etc. You can see the stopwords that are removed
 # by typing stopwords('english')
-text_corpus %<>% tm_map(removeWords, stopwords('english'))
+text_corpus %<>% tm_map(removeWords, stopwords("english"))
 
 # stripping any additional white space - multiple whitespace characters are 
 # collapsed to a single blank.
@@ -121,9 +143,11 @@ text_total_freq <- colSums(as.matrix(text_dtm)) %>%
 
 head(text_total_freq)
 
-#
-# Sentiment Analysis
-library(SentimentAnalysis)
+# 5. Sentiment Analysis ========================================================
+
+# Sentiment Analysis #
+
+# using package SentimentAnalysis (see above)
 
 # Using the Harvard-IV dictionary (General Inquirer) 
 # which is a dictionary of words associated with positive (1,915 words) or 
@@ -139,8 +163,8 @@ text_sent %<>% .[, 1:4] %>%
                as.data.frame()
 
 # here we see four variables:
-#   * WordCount - number of words in the corpus / string of text
-#   * SentimentGI - overall sentiment (positive - negative)
+#   * WordCount    - number of words in the corpus / string of text
+#   * SentimentGI  - overall sentiment (positive - negative)
 #   * NegativityGI - negative sentiment; higher = more negative
 #   * PositivityGI - positive sentiment; higher = more positive
 head(text_sent)
@@ -151,19 +175,22 @@ summary(text_sent$SentimentGI)
 positive_order <- order(text_sent$SentimentGI, decreasing = TRUE)
 text_dat[positive_order[1:5], ]
 
+# syuzhet #
+
+# using package syuzhet (see above)
+
 # Emotional word categorization using NRC emotion lexicon. For details
 # see: http://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm
 # the NRC emotion lexicon associates words with 8 emotions: anger, fear, 
 # anticipation, trust, surprise, sadness, joy, and disgust (as well as
 # negative and positive sentiment)
-library(syuzhet)
 
 # running this next line of code takes like 4ish minutes... so we will run
 # the nrc function on a subset of the data
 # text_emot <- get_nrc_sentiment(char_v = text_dat$Text)
 text_emot <- get_nrc_sentiment(char_v = text_dat$Text[1:1000])
 
-# inpsecting the data, we see a column per emtion and sentiment; the number
+# inpsecting the data, we see a column per emotion and sentiment; the number
 # is a count. For example, there are 2 words in sentence 3 that are associated
 # with the emotion Trust
 head(text_emot)
@@ -171,16 +198,16 @@ head(text_emot)
 # seems that trust is the dominant emotion in these comments
 colSums(text_emot)
 
+# 6. Predictive Modeling Setup =================================================
 
-# Basic predictive modeling setup
 # bag of words approach and n-gram approach
 
 # Bag of words approach basically ignores sentence grammer, word order, etc. 
 # How we have set up our data thus far is inline w/ the bag of words approach.
 # We have created Term Frequency matrix - often times for modeling, we create 
 # something called the Term Frequency - Inverse Document Frequency Matrix. This
-# matrix weights Term Frequency by how prevalent they are in the corpora (
-# text strings). If the word shows up often in and across the documents - they 
+# matrix weights Term Frequency by how prevalent they are in the corpora
+# (text strings). If the word shows up often in and across the documents - they 
 # get less weight (for example stop words - however we have already removed
 # these). A good overview can be found at: http://www.tfidf.com/
 text_tfidf <- DocumentTermMatrix(x       = text_corpus, 
@@ -198,7 +225,7 @@ mod_1      <- glm(y ~ ., data = mod_data_1, family = 'binomial')
 summary(mod_1)
 
 # n-gram
-# the previous approach looked at words independtly of other words w/in a text
+# the previous approach looked at words independently of other words w/in a text
 # string. N-grams allow you to create pair; triplets; etc representations of 
 # words. So for example, if we had the sentence:
 #   - "Great developer of people, managers allowed discretion"
@@ -212,6 +239,7 @@ summary(mod_1)
 
 # we will create a custom Tokenizer function to pass to tm's functions
 ngram_tokenizer <- function(x, n) {
+  
   # turn a text string (corpus) into a vector of words
   text_words <- words(x)
   # create a n-gram representation of the vector of words
@@ -230,9 +258,9 @@ trigram <- function(x) ngram_tokenizer(x, n = 3)
 # running this on all the data may cause an error due to memory limits. 
 text_corpus_shrunk <- text_corpus[1:1000]
 
-bigram_tfidf <- DocumentTermMatrix(x       = text_corpus_shrunk, 
-                                   control = list(tokenize  = bigram,
-                                                  weighting = weightTfIdf)) %>%
-                as.matrix()
+bigram_tfidf       <- DocumentTermMatrix(x       = text_corpus_shrunk, 
+                                         control = list(tokenize  = bigram,
+                                                        weighting = weightTfIdf)) %>%
+                     as.matrix()
 
 bigram_tfidf[1:10, 1:5]
