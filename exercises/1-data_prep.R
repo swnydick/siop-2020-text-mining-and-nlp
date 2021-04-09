@@ -26,42 +26,9 @@ library(magrittr)
 #proj_dir      <-"~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp"
 data_dir      <- file.path("data")
 
-# NOT REQUIRED: UNCOMMENT TO RUN #
-# not sure if we want this as part of the tutorial, or if we should just
-# have the data ready to go like that... leaving it up there for us to decide
-# if we have enough time i suppose
-
-# # read data into R
-# data_original <- read.csv(file.path(data_dir, "siop_2020_txt_lo-wide.csv"))
-# 
-# # parse pro column and remove "Pros" heading text
-# text_pro      <- data_original$txt_pro %>%
-#                  gsub(pattern     = "Pros</b><br/>",
-#                       replacement = "",
-#                       x           = .) %>%
-#                  data.frame(Text = .,
-#                             Pro  = 1)
-# 
-# # parse con column and remove "Cons" heading text
-# text_con      <- data_original$txt_con %>%
-#                  gsub(pattern     = "Cons</b><br/>",
-#                       replacement = "",
-#                       x           = .) %>%
-#                  gsub(pattern     = "<br/><br/>",
-#                       replacement = "",
-#                       x           = .) %>%
-#                  data.frame(Text = .,
-#                             Pro  = 0)
-# 
-# # combine
-# text_dat     <- rbind(text_pro, text_con)
-# 
-# write.csv(x         = text_dat,
-#           file      = file.path(data_dirm, "text_plus_pro_con.csv"),
-#           row.names = FALSE)
-
 # read processed data into R (if NOT running above code)
 text_dat    <- read.csv(file.path(data_dir, "text_plus_pro_con.csv"))
+
 
 # 3. Creating Corpus ===========================================================
 
@@ -210,8 +177,12 @@ colSums(text_emot)
 # (text strings). If the word shows up often in and across the documents - they 
 # get less weight (for example stop words - however we have already removed
 # these). A good overview can be found at: http://www.tfidf.com/
+
+# Note: Sparse terms are removed to ensure that the remaining words are in at least 2.5%
+# of comments
 text_tfidf <- DocumentTermMatrix(x       = text_corpus, 
                                  control = list(weighting = weightTfIdf)) %>%
+              removeSparseTerms(sparse = .975) %>%
               as.matrix()
 
 
@@ -219,7 +190,7 @@ text_tfidf <- DocumentTermMatrix(x       = text_corpus,
 # smaller one as an example
 # mod_data_1 <- data.frame(text_tfidf, y = text_dat$Pro)
 # summary(glm(y ~ ., data = mod_data_1))
-mod_data_1 <- data.frame(text_tfidf[, 1:50], y = text_dat$Pro)
+mod_data_1 <- data.frame(text_tfidf, y = text_dat$Pro)
 mod_1      <- glm(y ~ ., data = mod_data_1, family = 'binomial')
 
 summary(mod_1)

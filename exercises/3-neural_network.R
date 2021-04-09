@@ -33,12 +33,10 @@ require(magrittr)
 
 # 2. Prepare Data & Set params =================================================
 # Use fread for speed
-dt <- fread("data/siop_2020_txt_long.csv", nThread=4)
-# limit to just pro and con
-dt <- dt[text != "" & type %in% c("pro", "con"), ]
+dt <- data.table(text_dat)# fread("data/siop_2020_txt_long.csv", nThread=4)
 
-max_vocab  <- 10000 # vocabulary size (larger -> more thourough but slower)
-max_length <- 100   # text cutoff at n (make bigger for longer texts at expense of size/time)
+max_vocab  <- 8000 # vocabulary size (larger -> more thourough but slower)
+max_length <- 80   # text cutoff at n (make bigger for longer texts at expense of size/time)
 
 #   2a Clean text ==============================================================
 
@@ -55,17 +53,17 @@ max_length <- 100   # text cutoff at n (make bigger for longer texts at expense 
 #   textclean::replace_html() %>%            # <br> -> ""
 #   tolower()
 
-dt[, text := gsub(",", " ,", text)]
-dt[, text := gsub("^.*</b><br/>", "" , text)]  # Remove pros/cons html tag
-dt[, text := gsub("<.*?>", "", text)] # remove HTML junt
-dt[, text := gsub("brbr$", "" , text)]  
-dt[, text := gsub("[\\\r\\\n]", " " , text)] 
-dt[, text := tolower(text)]
+dt[, Text := gsub(",", " ,", Text)]
+dt[, Text := gsub("^.*</b><br/>", "" , Text)]  # Remove pros/cons html tag
+dt[, Text := gsub("<.*?>", "", Text)] # remove HTML junt
+dt[, Text := gsub("brbr$", "" , Text)]  
+dt[, Text := gsub("[\\\r\\\n]", " " , Text)] 
+dt[, Text := tolower(Text)]
 # target must be numeric to feed into neural net!
-dt[, target := ifelse(type == "pro", 1, 0)]
+dt[, target := as.integer(Pro)]
 
 # remove rows with NA values
-dt <- dt[!is.na(dt$text) & !is.na(dt$target), .(text, target)]
+dt <- dt[!is.na(dt$Text) & !is.na(dt$target), .(Text, target)]
 
 
 #   2b Tokenize ================================================================
@@ -87,7 +85,7 @@ if(file.exists(tokenizer_file)){
   tokenizer <- load_text_tokenizer(tokenizer_file)
 } else{
   tokenizer <- text_tokenizer(num_words = max_vocab) %>%
-               fit_text_tokenizer(dt$text)
+               fit_text_tokenizer(dt$Text)
   save_text_tokenizer(tokenizer, tokenizer_file)
 }
 
@@ -97,7 +95,7 @@ tokenizer$index_word[1:10] %>%
   data.frame(word = ., index = names(.))
 
 # Create equal length sequences of tokens
-txt_sequences <- texts_to_sequences(tokenizer, dt$text)
+txt_sequences <- texts_to_sequences(tokenizer, dt$Text)
 # Now pad/truncate so all are the same length. snip off super long comments at the beginning
 text_data     <- pad_sequences(sequences  = txt_sequences, 
                                maxlen     = max_length)
@@ -226,7 +224,7 @@ if(file.exists(filename)){
 # I'm certain that with tuning & pruning I could get even better results! 
 
 
-wiki_embedding_dim <- 300
+embedding_dim <- 300
 
 # Setup input layer. Using 16-bit ints since smaller vocab to save VRAM
 input <- layer_input(
@@ -240,7 +238,7 @@ input <- layer_input(
 # Embedding - will populate with weights later
 embedding <- layer_embedding(object     = input,
                              input_dim  = max_vocab, 
-                             output_dim = wiki_embedding_dim, 
+                             output_dim = embedding_dim, 
                              name      = "embedding")
 
 # Long Short Term Memory
@@ -262,14 +260,6 @@ hidden <- lstm %>%
   layer_dense(units = max_length, 
               activation = "tanh", 
               name = "hidden",  
-              kernel_regularizer = regularizer_l1_l2(l1 = 0.005, l2 = 0.005)) %>%
-  layer_dense(units = 32, 
-              activation = "tanh", 
-              name = "hidden2",
-              kernel_regularizer = regularizer_l1_l2(l1 = 0.005, l2 = 0.005)) %>%
-  layer_dense(units = 32, 
-              activation = "tanh", 
-              name = "hidden3",
               kernel_regularizer = regularizer_l1_l2(l1 = 0.005, l2 = 0.005)) %>%
   layer_dense(units = 16,
               activation = "tanh",
@@ -317,7 +307,7 @@ print(model)
 
 # create a checkpoint (save best version off model as it trains)
 #tensorboard("logs/md_log") 
-checkpoint_path <- "cp2.ckpt"
+checkpoint_path <- "cp.ckpt"
 
 # Checkpoint callback - to take the top validating model
 cp_callback <- callback_model_checkpoint(
@@ -330,7 +320,7 @@ cp_callback <- callback_model_checkpoint(
 history <- fit(object          = model,
                x               = x_train,
                y               = y_train,
-               batch_size      = 128,
+               batch_size      = 512,
                validation_data = list(x_test, y_test),
                epochs          = 10,
                shuffle         = TRUE,
