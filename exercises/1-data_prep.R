@@ -23,8 +23,8 @@ library(magrittr)
 # 2. Loading Data ==============================================================
 
 # get project directory (SPECIFY MANUALLY???)
-proj_dir      <-"~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp"
-data_dir      <- file.path(proj_dir, "data")
+#proj_dir      <-"~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp"
+data_dir      <- file.path("data")
 
 # NOT REQUIRED: UNCOMMENT TO RUN #
 # not sure if we want this as part of the tutorial, or if we should just
@@ -264,3 +264,4 @@ bigram_tfidf       <- DocumentTermMatrix(x       = text_corpus_shrunk,
                      as.matrix()
 
 bigram_tfidf[1:10, 1:5]
+
