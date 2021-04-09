@@ -10,6 +10,7 @@
 # Make sure to have objects from data_prep.R loaded for this section. We will
 # use the following packages
 
+# YES GPU #
 # NOTE!!!!
 # ONLY SET-gou IF YOU HAVE CONFIGURED CUDA AND CuDNN
 # keras also has a function to install tf (try this first)
@@ -17,6 +18,9 @@
 
 # if having issues, can help to bypass and go through tf directly
 #tensorflow::install_tensorflow(version = "2.2.0-gpu")
+
+# NO GPU #
+#keras::install_keras()
 
 # Check python/reticulate.
 # May need to set interpreter in tools > global options > python
@@ -28,12 +32,13 @@ require(data.table)
 require(keras)
 require(magrittr)
 
-
-
-
 # 2. Prepare Data & Set params =================================================
+
+# data from 1-data_prep.R, but read in standalone here
+
 # Use fread for speed
-dt <- data.table(text_dat)# fread("data/siop_2020_txt_long.csv", nThread=4)
+data_dir   <- file.path("data")
+dt         <- fread(file.path(data_dir, "text_plus_pro_con.csv"))
 
 max_vocab  <- 8000 # vocabulary size (larger -> more thourough but slower)
 max_length <- 80   # text cutoff at n (make bigger for longer texts at expense of size/time)

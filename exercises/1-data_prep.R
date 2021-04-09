@@ -24,10 +24,10 @@ library(magrittr)
 
 # get project directory (SPECIFY MANUALLY???)
 #proj_dir      <-"~/Desktop/Projects/Active/SIOP_2020/siop-2020-text-mining-and-nlp"
-data_dir      <- file.path("data")
+data_dir       <- file.path("data")
 
 # read processed data into R (if NOT running above code)
-text_dat    <- read.csv(file.path(data_dir, "text_plus_pro_con.csv"))
+text_dat       <- read.csv(file.path(data_dir, "text_plus_pro_con.csv"))
 
 
 # 3. Creating Corpus ===========================================================
