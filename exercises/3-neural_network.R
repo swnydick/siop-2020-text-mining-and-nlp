@@ -325,7 +325,7 @@ cp_callback <- callback_model_checkpoint(
 history <- fit(object          = model,
                x               = x_train,
                y               = y_train,
-               batch_size      = 512,
+               batch_size      = 1024,
                validation_data = list(x_test, y_test),
                epochs          = 10,
                shuffle         = TRUE,
@@ -352,7 +352,7 @@ keras::save_model_hdf5(top_model, "glassdoor_model.hdf5")
 # always a good idea to save with the model
 saveRDS(list(max_vocab  = max_vocab, 
              max_length = max_length,
-             embed_dim  = wiki_embedding_dim,
+             embed_dim  = embedding_dim,
              train_date = Sys.Date(),
              train_size = dim(x_train),
              train_hist = history,

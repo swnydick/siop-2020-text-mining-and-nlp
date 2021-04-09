@@ -7,6 +7,12 @@
 .AppleDouble
 .LSOverride
 
+# Keras
+cp.ckpt
+cp.ckpt/*
+*.hdf5
+glassdoor_specs.RDS
+
 # Icon must end with two \r
 Icon
 
