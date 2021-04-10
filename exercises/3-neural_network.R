@@ -10,22 +10,31 @@
 # Make sure to have objects from data_prep.R loaded for this section. We will
 # use the following packages
 
-# YES GPU #
+# USE MINICONDA? #
+# reticulate::conda_create("r-reticulate")
+# reticulate::use_condaenv("r-reticulate")
+
+# NO GPU? #
+# keras::install_keras(method = "conda", envname = "r-reticulate")
+
+# YES GPU? #
 # NOTE!!!!
 # ONLY SET-gou IF YOU HAVE CONFIGURED CUDA AND CuDNN
 # keras also has a function to install tf (try this first)
-#keras::install_keras(tensorflow="2.2.0-gpu")
+# keras::install_keras(tensorflow="2.2.0-gpu",
+#                      method = "conda", envname = "r-reticulate")
 
 # if having issues, can help to bypass and go through tf directly
-#tensorflow::install_tensorflow(version = "2.2.0-gpu")
+# tensorflow::install_tensorflow(version = "2.2.0-gpu",
+#                                method  = "conda", envname = "r-reticulate")
 
-# NO GPU #
-#keras::install_keras()
+# you can leave out method/envname if you want to install it using virtualenv
 
 # Check python/reticulate.
 # May need to set interpreter in tools > global options > python
 reticulate::py_config()
 tensorflow::tf_config()
+
 # Should see tensorflow on BOTH
 
 require(data.table)
@@ -60,10 +69,11 @@ max_length <- 80   # text cutoff at n (make bigger for longer texts at expense o
 
 dt[, Text := gsub(",", " ,", Text)]
 dt[, Text := gsub("^.*</b><br/>", "" , Text)]  # Remove pros/cons html tag
-dt[, Text := gsub("<.*?>", "", Text)] # remove HTML junt
+dt[, Text := gsub("<.*?>", "", Text)]           # remove HTML junt
 dt[, Text := gsub("brbr$", "" , Text)]  
 dt[, Text := gsub("[\\\r\\\n]", " " , Text)] 
 dt[, Text := tolower(Text)]
+
 # target must be numeric to feed into neural net!
 dt[, target := as.integer(Pro)]
 
@@ -101,6 +111,7 @@ tokenizer$index_word[1:10] %>%
 
 # Create equal length sequences of tokens
 txt_sequences <- texts_to_sequences(tokenizer, dt$Text)
+
 # Now pad/truncate so all are the same length. snip off super long comments at the beginning
 text_data     <- pad_sequences(sequences  = txt_sequences, 
                                maxlen     = max_length)
@@ -119,16 +130,17 @@ text_data     <- pad_sequences(sequences  = txt_sequences,
 # Caret has a nice function to split our data to make sure that the responses are equally represented
 
 set.seed(3364900) # fixes random number generation - for reproducability (within R, not CUDA!)
+
 # Partition training and test data balanced by type (pro/con) &  use 80% in training
 # Key to split is how many data points atre really needed for validation & testing
 train_idx <- caret::createDataPartition(dt$target, p = .8, list = FALSE)
 
 # Now split by balanced test/train indexes
-x_train <- text_data[train_idx, ] %>% as.matrix() %>% unname()
-x_test  <- text_data[-train_idx,] %>% as.matrix() %>% unname()
+x_train   <- text_data[train_idx, ] %>% as.matrix() %>% unname()
+x_test    <- text_data[-train_idx,] %>% as.matrix() %>% unname()
 
-y_train <- dt[train_idx,  target] %>% as.matrix() %>% unname()
-y_test  <- dt[-train_idx, target] %>% as.matrix() %>% unname()
+y_train   <- dt[train_idx,  target] %>% as.matrix() %>% unname()
+y_test    <- dt[-train_idx, target] %>% as.matrix() %>% unname()
 
 # 3. Get Embedding =============================================================
 
@@ -146,7 +158,6 @@ y_test  <- dt[-train_idx, target] %>% as.matrix() %>% unname()
 # 
 # Check if this has already ran - no need to do it more than once! 
 filename <- paste0("data/wiki_embedding_mx-300-", max_vocab, "-", max_length, ".RDS")
-# print(filename)
 
 if(file.exists(filename)){
   wiki_embedding_mx <- readRDS(filename)
@@ -154,10 +165,11 @@ if(file.exists(filename)){
   # Get Embeddings - give similarity between words used in English
   
   # 1: unzip embedding (>2GB)
-  unzip("data/wiki-news-300d-1M.vec", )
+  unzip("data/wiki-news-300d-1M.vec")
   
   # 2: read unzipped object (will be in project dir)
   lines <- readLines("wiki-news-300d-1M.vec")
+  
   # omit junk line 1
   lines <- lines[2:length(lines)]
   
@@ -167,6 +179,7 @@ if(file.exists(filename)){
   
   # This process takes a long time, so going to run in parallel
   require(pbapply)
+  
   #24x faster...BUT no names..so effective 12x speedup
   wiki_embeddings <- pblapply(lines, 
                               function(line){
@@ -175,6 +188,7 @@ if(file.exists(filename)){
                                 return(out)
                               }, 
                               cl = parallel::makeCluster(parallel::detectCores()))
+  
   # So need to get and extract embedding names (unfortunately can't do all at once)
   embedding_names <-  pblapply(lines, 
                                function(line){
@@ -183,6 +197,7 @@ if(file.exists(filename)){
                                  return(word)
                                }, 
                                cl = parallel::makeCluster(parallel::detectCores()))
+  
   # It really pains me that I can't return to names index in a cluster apply 
   names(wiki_embeddings) <- embedding_names
   str(head(wiki_embeddings))
@@ -202,7 +217,7 @@ if(file.exists(filename)){
     if (index < max_vocab){
       wiki_embedding_vec <- wiki_embeddings[[word]]
       if (!is.null(wiki_embedding_vec))
-        wiki_embedding_mx[index+1,] <- wiki_embedding_vec # Words without an embedding are all zeros
+        wiki_embedding_mx[index + 1,] <- wiki_embedding_vec # Words without an embedding are all zeros
     }
   }
   
@@ -211,6 +226,7 @@ if(file.exists(filename)){
   saveRDS(wiki_embedding_mx, filename)
   rm(wiki_embeddings)
   gc()
+  
   # remove unzipped file
   file.remove("wiki-news-300d-1M.vec")
 }
@@ -227,7 +243,6 @@ if(file.exists(filename)){
 # Note that as this is just for demonstration purposes, 
 # the model structure has not undergone pruning or optimization.
 # I'm certain that with tuning & pruning I could get even better results! 
-
 
 embedding_dim <- 300
 
@@ -268,8 +283,7 @@ hidden <- lstm %>%
               kernel_regularizer = regularizer_l1_l2(l1 = 0.005, l2 = 0.005)) %>%
   layer_dense(units = 16,
               activation = "tanh",
-              name = "hidden4",
-  )
+              name = "hidden4")
 
 # Output - sigmoid for probabilities
 predictions <- layer_dense(object     = hidden,
@@ -287,15 +301,12 @@ get_layer(model, name = "embedding") %>%
   set_weights(list(wiki_embedding_mx)) %>% 
   freeze_weights()
 
-
-
 # Compile
 model %>% compile(
   optimizer = optimizer_adam(),
   loss      = "binary_crossentropy",
   metrics   = "binary_accuracy"
 )
-
 
 print(model)
 
@@ -322,6 +333,7 @@ cp_callback <- callback_model_checkpoint(
   verbose           = 1
 )
 
+# sometimes the callbacks argument will not work
 history <- fit(object          = model,
                x               = x_train,
                y               = y_train,
@@ -330,7 +342,7 @@ history <- fit(object          = model,
                epochs          = 10,
                shuffle         = TRUE,
                view_metrics    = TRUE,
-               callbacks       = list(cp_callback),
+               callbacks       = list(cp_callback), # comment out if doesn't work
                verbose         = 1)
 
 # Look at training results
@@ -338,8 +350,14 @@ print(history)
 
 
 # 6. Evaluate ==================================================================
-# Restore best model from checkpoint
-top_model <- load_model_tf(checkpoint_path)
+
+# restore best model from checkpoint (IF EXISTS)
+if(file.exists(checkpoint_path)){
+  top_model <- load_model_tf(checkpoint_path)
+} else{
+  top_model <- model
+}
+
 # Create predictions vs real (as factors for caret)
 y_pred    <- predict(top_model, x_test)
 y_pred    <- factor(round(y_pred))
