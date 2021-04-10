@@ -15,18 +15,20 @@
 # reticulate::use_condaenv("r-reticulate")
 
 # NO GPU? #
-# keras::install_keras(method = "conda", envname = "r-reticulate")
+# keras::install_keras(method  = "conda",
+#                      envname = "r-reticulate")
 
 # YES GPU? #
-# NOTE!!!!
 # ONLY SET-gou IF YOU HAVE CONFIGURED CUDA AND CuDNN
 # keras also has a function to install tf (try this first)
-# keras::install_keras(tensorflow="2.2.0-gpu",
-#                      method = "conda", envname = "r-reticulate")
+# keras::install_keras(tensorflow = "2.2.0-gpu",
+#                      method     = "conda",
+#                      envname    = "r-reticulate")
 
 # if having issues, can help to bypass and go through tf directly
 # tensorflow::install_tensorflow(version = "2.2.0-gpu",
-#                                method  = "conda", envname = "r-reticulate")
+#                                method  = "conda",
+#                                envname = "r-reticulate")
 
 # you can leave out method/envname if you want to install it using virtualenv
 
@@ -40,6 +42,9 @@ tensorflow::tf_config()
 require(data.table)
 require(keras)
 require(magrittr)
+
+# ONLY if you need to run things in parallel
+require(pbapply)
 
 # 2. Prepare Data & Set params =================================================
 
@@ -83,14 +88,16 @@ dt <- dt[!is.na(dt$Text) & !is.na(dt$target), .(Text, target)]
 
 #   2b Tokenize ================================================================
 
-# To feed words into a neural network, they need to be made into numbers somehow so math can happen
-# e.g.
-# "I like dogs"
+# To feed words into a neural network, they need to be made into numbers somehow
+# so math can happen
+# 
+# e.g.: "I like dogs"
 # could be a sparse matrix
-# I | am | to | so | like | this | cats | mice | dogs | ... (x10000)
+# I | am | to | so | like | this | cats | mice | dogs | ... (x 10000)
 # 1 | 0  | 0  | 0  |  1   |  0   |  0   |  0   |   1  |  0  (x 10000)
-# but that's not efficient, instead we "tokenize" and return the index numbers instead, e.g.
-# "I like dogs" = [1, 5, 9]
+# but that's not efficient, instead we "tokenize" and return the index numbers
+# instead
+# e.g.: "I like dogs" = [1, 5, 9]
 
 
 # First try to load a pre-saved tokenizer (for performance) 
@@ -112,24 +119,31 @@ tokenizer$index_word[1:10] %>%
 # Create equal length sequences of tokens
 txt_sequences <- texts_to_sequences(tokenizer, dt$Text)
 
-# Now pad/truncate so all are the same length. snip off super long comments at the beginning
-text_data     <- pad_sequences(sequences  = txt_sequences, 
-                               maxlen     = max_length)
+# Now pad/truncate so all are the same length. snip off super long comments at
+# the beginning
+text_data     <- pad_sequences(sequences = txt_sequences, 
+                               maxlen    = max_length)
 
 
 #   2c Test/Train Split ========================================================
 
-# Now to split our data into training and validation. Note that it's now trendy to call your
-# validation set the "dev" set. In practice, you should make:
-# Training set
-# Validation (dev) set
-# Test set
-# Train the model on the training set and tweak it until it's working well on the validation set
-# Once it looks good use the test set and make sure that it performas about as well on the test and validfation (dev) set! 
+# Now to split our data into training and validation. Note that it's now trendy
+# to call your validation set the "dev" set. In practice, you should make:
+#  - Training set
+#  - Validation (dev) set
+#  - Test set
+# 
+# Then you should:
+#  - Train the model on the training set and tweak it until it's working well
+#    on the validation set
+#  - Once it looks good use the test set and make sure that it performas about
+#    as well on the test and validfation (dev) set! 
 
-# Caret has a nice function to split our data to make sure that the responses are equally represented
+# Caret has a nice function to split our data to make sure that the responses
+# are equally represented
 
-set.seed(3364900) # fixes random number generation - for reproducability (within R, not CUDA!)
+# fixes random number generation - for reproducability (within R, not CUDA!)
+set.seed(3364900)
 
 # Partition training and test data balanced by type (pro/con) &  use 80% in training
 # Key to split is how many data points atre really needed for validation & testing
@@ -144,16 +158,21 @@ y_test    <- dt[-train_idx, target] %>% as.matrix() %>% unname()
 
 # 3. Get Embedding =============================================================
 
-# Embedding layers are vectors that contain information about the similarity/dissimilarity of words.
-# An embedding layer contains knowledge of language structure and synonyms. 
-# For example, that `emerald` is more closely related to `sapphire` than it is to `donkey`. 
+# Embedding layers are vectors that contain information about the
+# similarity/dissimilarity of words.
+
+# An embedding layer contains knowledge of language structure and synonyms:
+#   For example, that `emerald` is more closely related to `sapphire` than it is
+#   to `donkey`. 
 # Creating language embeddings is a heavy task, and beyond our scope. 
-# HOWEVER! I don't need to because I can take an open-sourced pre-trained language embedding model! 
-# I'll use[a relatively small model pretrained on wiki news (word2vec). 
+# HOWEVER! I don't need to because I can take an open-sourced pre-trained
+# language embedding model! 
+#   I'll use a relatively small model pretrained on wiki news (word2vec). 
 # 
-# Extracting these embeddings and creating a weight matrix that can be fed into a new neural network.
-# This is computationally intensive.
-# It's best to do it in parallel and preferebly only once per combination of dictionary size and max sequence length. 
+# Extracting these embeddings and creating a weight matrix that can be fed into
+# a new neural network ... This is computationally intensive.
+# It's best to do it in parallel and preferebly only once per combination of
+# dictionary size and max sequence length. 
 
 # 
 # Check if this has already ran - no need to do it more than once! 
@@ -162,6 +181,7 @@ filename <- paste0("data/wiki_embedding_mx-300-", max_vocab, "-", max_length, ".
 if(file.exists(filename)){
   wiki_embedding_mx <- readRDS(filename)
 } else {
+  
   # Get Embeddings - give similarity between words used in English
   
   # 1: unzip embedding (>2GB)
@@ -178,25 +198,25 @@ if(file.exists(filename)){
   wiki_embeddings <- list()
   
   # This process takes a long time, so going to run in parallel
-  require(pbapply)
+  cluster         <- parallel::makeCluster(parallel::detectCores())
   
-  #24x faster...BUT no names..so effective 12x speedup
+  # 24x faster...BUT no names..so effective 12x speedup
   wiki_embeddings <- pblapply(lines, 
                               function(line){
                                 values     <- strsplit(line, " ")[[1]]
                                 out        <- as.double(values[-1])
                                 return(out)
                               }, 
-                              cl = parallel::makeCluster(parallel::detectCores()))
+                              cl = cluster)
   
   # So need to get and extract embedding names (unfortunately can't do all at once)
-  embedding_names <-  pblapply(lines, 
-                               function(line){
-                                 values     <- strsplit(line, " ")[[1]]
-                                 word       <- values[[1]]
-                                 return(word)
-                               }, 
-                               cl = parallel::makeCluster(parallel::detectCores()))
+  embedding_names <- pblapply(lines, 
+                              function(line){
+                                values     <- strsplit(line, " ")[[1]]
+                                word       <- values[[1]]
+                                return(word)
+                              }, 
+                              cl = cluster)
   
   # It really pains me that I can't return to names index in a cluster apply 
   names(wiki_embeddings) <- embedding_names
@@ -213,11 +233,12 @@ if(file.exists(filename)){
   wiki_embedding_mx  <- array(0, c(max_vocab, wiki_embedding_dim))
   
   for (word in names(word_index)){
-    index <- word_index[[word]]
+    index <- word_index[[word]]                              # pull out index of word
     if (index < max_vocab){
-      wiki_embedding_vec <- wiki_embeddings[[word]]
-      if (!is.null(wiki_embedding_vec))
-        wiki_embedding_mx[index + 1,] <- wiki_embedding_vec # Words without an embedding are all zeros
+      wiki_embedding_vec <- wiki_embeddings[[word]]          # if we have an embedding, pull it
+      if (!is.null(wiki_embedding_vec)){
+        wiki_embedding_mx[index + 1, ] <- wiki_embedding_vec # words without an embedding are all zeros
+      }
     }
   }
   
@@ -235,14 +256,15 @@ if(file.exists(filename)){
 # 4. Make model ================================================================
 
 # 
-# The neural network schematic is created using the Keras interface to the Tensorflow back end. 
-# Once the network's topology is set, the layers are combined and then the weights from the 
-# pre-trained embedding layer (containing a general understanding of the English language) are superimposed 
-# onto the network's embedding layer and are set to be frozen (non-trainable). 
+# The neural network schematic is created using the Keras interface to the
+# Tensorflow back end. Once the network's topology is set, the layers are combined
+# and then the weights from the pre-trained embedding layer (containing a general
+# understanding of the English language) are superimposed onto the network's
+# embedding layer and are set to be frozen (non-trainable). 
 # 
-# Note that as this is just for demonstration purposes, 
-# the model structure has not undergone pruning or optimization.
-# I'm certain that with tuning & pruning I could get even better results! 
+# Note that this is just for demonstration purposes: 
+#   - The model structure has not undergone pruning or optimization.
+#   - I'm certain that with tuning & pruning I could get even better results! 
 
 embedding_dim <- 300
 
@@ -274,16 +296,17 @@ lstm <- layer_lstm(object               = embedding,
                    name                 = "lstm")
 
 # Hidden Layers - using trusty tanh + lil2 norm. (can fall back to relu is speed is dragging)
-# see how you can chain on more layers!
-# Add dropout if it overfits. 
+#  ... see how you can chain on more layers!
+#  ... add dropout if it overfits. 
 hidden <- lstm %>%
-  layer_dense(units = max_length, 
+  layer_dense(units      = max_length, 
               activation = "tanh", 
-              name = "hidden",  
-              kernel_regularizer = regularizer_l1_l2(l1 = 0.005, l2 = 0.005)) %>%
-  layer_dense(units = 16,
+              name       = "hidden",  
+              kernel_regularizer = regularizer_l1_l2(l1 = 0.005,
+                                                     l2 = 0.005)) %>%
+  layer_dense(units      = 16,
               activation = "tanh",
-              name = "hidden4")
+              name       = "hidden4")
 
 # Output - sigmoid for probabilities
 predictions <- layer_dense(object     = hidden,
@@ -292,7 +315,8 @@ predictions <- layer_dense(object     = hidden,
                            name       = "predictions")
 
 
-# Bring model together - predictions is a chain of embedding -> lstm -> hidden -> output
+# Bring Model Together:
+# note that predictions is a chain of embedding -> lstm -> hidden -> output
 model <- keras_model(input, predictions)
 
 # Set embedding layer to be wiki news weights
@@ -313,13 +337,16 @@ print(model)
 
 # 5. Train Model ===============================================================
 
-# Now to train the model just feed in the training input and output, the
-# batch size, validation data (to see how it performs on data it isn't being optimized on), 
-# the number of `epochs` (times to cycle through all training data elements), tell it to shuffle the 
-# order in which it sees data every time, then tell it to keep logs for us to evaluate. 
+# Now to train the model just feed in:
+#  - the training input and output
+#  - the batch size
+#  - validation data (to see how it performs on data it isn't being optimized on)
+#  - the number of `epochs` (times to cycle through all training data elements)
+#  - tell it to shuffle the  order in which it sees data every time
+#  - tell it to keep logs for us to evaluate. 
 # 
-# NOTE - this will use a LOT of system resources, so assume that your computer will freeze and crash if you
-# run the below code.
+# NOTE: this will use a LOT of system resources, so assume that your computer
+#       will freeze and crash if you run the below code.
 
 # create a checkpoint (save best version off model as it trains)
 #tensorboard("logs/md_log") 
@@ -342,10 +369,10 @@ history <- fit(object          = model,
                epochs          = 10,
                shuffle         = TRUE,
                view_metrics    = TRUE,
-               callbacks       = list(cp_callback), # comment out if doesn't work
+               # callbacks       = list(cp_callback), # comment out if doesn't work
                verbose         = 1)
 
-# Look at training results
+# look at training results
 print(history)
 
 
@@ -358,7 +385,7 @@ if(file.exists(checkpoint_path)){
   top_model <- model
 }
 
-# Create predictions vs real (as factors for caret)
+# create predictions vs real (as factors for caret)
 y_pred    <- predict(top_model, x_test)
 y_pred    <- factor(round(y_pred))
 y_real    <- factor(round(y_test))

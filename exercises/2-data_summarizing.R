@@ -99,8 +99,6 @@ letterCloud(data        = text_total_freq_part2,
 # - You can choose multiple letters for letter cloud, but sometimes it will not
 #   include really big letters (for some odd reason)
 
-# Note: doesn't seem to work right now ... in RStudio OR R.
-
 #   2b. Sentiment-based Wordclouds ---------------------------------------------
 
 # tidytext has a function to pull sentiments out for individual words, which we

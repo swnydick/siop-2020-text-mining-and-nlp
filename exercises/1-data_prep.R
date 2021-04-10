@@ -232,7 +232,7 @@ text_corpus_shrunk <- text_corpus[1:1000]
 bigram_tfidf       <- DocumentTermMatrix(x       = text_corpus_shrunk, 
                                          control = list(tokenize  = bigram,
                                                         weighting = weightTfIdf)) %>%
-                     as.matrix()
+                      as.matrix()
 
 bigram_tfidf[1:10, 1:5]
 

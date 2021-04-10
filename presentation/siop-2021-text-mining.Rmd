@@ -1,0 +1,176 @@
+---
+title: "Text Mining and NLP with R"
+author:
+- "Steven Nydick"
+- "Ben Wiseman"
+- "Jeff Jones"
+date: "4/15/2021"
+output:
+  slidy_presentation:
+    footer: "Copyright \u00A9 2021, Korn Ferry"
+    css: ['styles.css', 'https://fonts.googleapis.com/css?family=Open+Sans']
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 4, fig.height = 3)
+require(kableExtra)
+```
+
+
+## Setup
+
+1. Requires <img src="https://www.r-project.org/Rlogo.png" height="30px;" />
+    - https://www.r-project.org/
+2. Suggests <img
+             src="https://www.rstudio.com/wp-content/uploads/2016/09/RStudio-Logo-Blue-Gray-250.png"
+             height="30px;" />
+    - https://www.rstudio.com/products/rstudio/download/
+3. Materials 
+    - https://bit.ly/2KKXlHQ
+
+## Package Installation
+
+This demonstration requires the following packages:
+
+1. Data Prep Section
+    - tm
+    - SentimentAnalysis
+    - syuzhet
+    - magrittr
+2. Data Summarizing Section
+    - All of the above ... plus
+    - wordcloud
+    - wordcloud2
+    - tidytext
+    - dplyr
+    - tidyr
+    - ggplot2
+3. Neural Network Section
+    - All of the above ... plus
+    - reticulate
+    - keras
+    - magrittr
+    
+## Standard Package Installation
+
+You can install the packages with (modifying) the following line of code
+
+```{r, eval=FALSE}
+install.packages("data.table")
+```
+
+And then load them with the following line of code
+
+```{r}
+library(data.table)
+```
+
+Some packages have tricks to make them work fully.
+
+The wordcloud2 package needs to be installed from github (using devtools)
+
+```{r, eval=FALSE}
+install.package("devtools") # if you don't have this already
+devtools::install_github("lchiffon/wordcloud2")
+```
+
+And then there's keras/tensorflow ...
+
+## Keras/Tensorflow Package Installation
+
+Keras/Tensorflow needs to link to python to work correctly, through the
+reticulate package in R. The easiest way of doing this is via miniconda.
+
+1. Install the required packages
+
+```{r, eval=FALSE}
+# installing keras should install reticulate if it's not already installed ...
+install.packages("keras")
+```
+
+2. Install miniconda and create a new environment (called "r-reticulate" for
+   ease, but you can call it anything you want). You can also do this via the
+   command line if it's easier and then link it using Global Options in RStudio.
+
+```{r, eval=FALSE}
+reticulate::install_miniconda()
+reticulate::conda_create("r-reticulate")
+```
+3. Install keras into the conda environment
+
+```{r, eval=FALSE}
+keras::install_keras(method  = "conda",
+                     envname = "r-reticulate")
+```
+
+4. Make sure that you are set to the correct environment
+
+```{r}
+reticulate::use_condaenv("r-reticulate")
+```
+
+5. Make sure everything exists on your system
+
+```{r}
+reticulate::py_config()
+tensorflow::tf_config()
+```
+
+Note that ONLY IF you have CUDA/CuDNN configured, you can install the GPU
+version of Tensorflow:
+
+```{r, eval=FALSE}
+keras::install_keras(tensorflow = "2.2.0-gpu",
+                     method     = "conda",
+                     envname    = "r-reticulate")
+```
+
+## What We Want From You:
+
+1. This session assumes familiarity with `R`. Please keep questions relevant
+   to the topics. We have a asynchronous presentation covering basics of `R`.
+2. Try to run all of the code in `RStudio`. The setup of the demonstrations
+   naturally works in `RStudio`. If you do not have `RStudio`, you can certainly
+   run all of the code in `R` or a different IDE.
+3. If you have trouble with setting up tensorflow/keras, we can try to debug
+   later!
+4. Have fun!
+
+## Three Basic Steps
+
+1. Data Preparation
+    - Make letters the same case
+    - Remove numbers
+    - Remove punctuation
+    - Remove stopwords (words with out content meaning)
+    - Remove excess whitespace
+    - Stem words
+    - Tokenize text
+    - (Possibly) convert to term document matrix
+2. Data Summarizing
+    - Sentiment Analysis
+    - Wordcloud
+    - Comparison Cloud
+    - Category Plots
+3. Data "Science"
+    - GLM (and Extensions)
+    - Tree Models (RandomForests, Boosted Trees, etc.)
+    - Neural Nets
+
+## Context Matters
+
+Many of the data processing/preparation steps depends on context.
+
+1. Are we making a simple wordcloud? *We probably want to remove stopwords,
+   punctuation, and stem everything.*
+
+2. Are we throwing things into a neural net? *Maybe the exact structure of the
+   sentence will help predict the next word, or make a better translation?*
+
+3. What if we are throwing things into a neural net when predicting a binary
+   outcome? *There are many ways to clean and tokenize data.*
+
+Note that a lot of cleaning steps are mostly ignored for the neural net part,
+and the model still does pretty good (because of the way that embeddings work).
+
+## Exercises
