@@ -18,6 +18,8 @@ library(tidyr)
 library(ggplot2)
 
 # get project directory (SPECIFY MANUALLY???)
+proj_dir     <- here::here()
+
 setwd(proj_dir)
 analyses_dir <- file.path(proj_dir, "exercises")
 
@@ -40,11 +42,12 @@ text_total_freq_part   <- text_total_freq[1:400, , drop = FALSE]
 
 # completing the stems so that the words are actual words that show up in the
 # document rather than stemmed/partial words (slow, so pre-processing).
-text_total_freq_part_prep <- mutate(
-  .data = total_text_freq_part,
-  word  = stemCompletion(x          = rownames(.),
-                         dictionary = text_dict)
-)
+text_total_freq_part_prep <-
+  text_total_freq_part %>%
+  mutate(
+    word  = stemCompletion(x          = rownames(.),
+                           dictionary = text_dict)
+  )
 
 # reassign pre-processed part
 text_total_freq_part      <- text_total_freq_part_prep
