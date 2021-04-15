@@ -50,7 +50,7 @@ text_total_freq_part_prep <-
   )
 
 # reassign pre-processed part
-text_total_freq_part      <- text_total_freq_part_prep
+text_total_freq_part <- text_total_freq_part_prep
 
 wordcloud(words        = text_total_freq_part$word,
           freq         = text_total_freq_part$count,
@@ -196,7 +196,7 @@ text_total_freq_type <- lapply(
   X   = text_dtm_type,
   FUN = function(dtm){
     data.frame(count = colSums(as.matrix(dtm))) %>%
-    .[order(.$count, decreasing = TRUE), , drop = FALSE] %>%
+    arrange(desc(count)) %>%
     tibble::rownames_to_column(var = "word")
 })
 
@@ -225,7 +225,7 @@ text_total_freq_type_prep <- mutate(
 )
 
 # reassign pre-processed part
-text_total_freq_type      <- text_total_freq_type_prep
+text_total_freq_type   <- text_total_freq_type_prep
 
 # - combining different stems together
 text_total_freq_type %<>% group_by(type, word) %>%
@@ -254,7 +254,7 @@ comparison.cloud(term.matrix  = dtm_type,
 # we can make a plot of the text sentiment across the diffferent text
 
 # let's take the first 1000 pros and cons of text_dat
-inds          <- lapply(X   = c(0, nrow(text_dat) / 2),
+inds          <- lapply(X   = c(0, nrow(text_dat) %/% 2),
                         FUN = function(i, n) i + seq_len(n),
                         n   = 1000)
 inds          <- pmin(pmax(unique(unlist(inds)), 1), nrow(text_dat))
