@@ -39,11 +39,15 @@ text_total_freq_part   <- text_total_freq[1:400, , drop = FALSE]
 #   2a. Basic Wordclouds -------------------------------------------------------
 
 # completing the stems so that the words are actual words that show up in the
-# document rather than stemmed/partial words.
-text_total_freq_part %<>% mutate(
-  word = stemCompletion(x          = rownames(.),
-                        dictionary = text_dict)
+# document rather than stemmed/partial words (slow, so pre-processing).
+text_total_freq_part_prep <- mutate(
+  .data = total_text_freq_part,
+  word  = stemCompletion(x          = rownames(.),
+                         dictionary = text_dict)
 )
+
+# reassign pre-processed part
+text_total_freq_part      <- text_total_freq_part_prep
 
 wordcloud(words        = text_total_freq_part$word,
           freq         = text_total_freq_part$count,
@@ -210,11 +214,15 @@ text_total_freq_type %<>% group_by(type) %>%
                                 wt = count) %>%
                           ungroup()
 
-# - completing the stems of each word
-text_total_freq_type %<>% mutate(
-  word = stemCompletion(x          = word,
-                        dictionary = text_dict)
+# - completing the stems of each word (slow, so pre-processing)
+text_total_freq_type_prep <- mutate(
+  .data = text_total_freq_type,
+  word  = stemCompletion(x          = word,
+                         dictionary = text_dict)
 )
+
+# reassign pre-processed part
+text_total_freq_type      <- text_total_freq_type_prep
 
 # - combining different stems together
 text_total_freq_type %<>% group_by(type, word) %>%
