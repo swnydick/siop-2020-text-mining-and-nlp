@@ -118,7 +118,7 @@ letterCloud(data        = text_total_freq_part2,
 #   word  = stemCompletion(x          = rownames(.),
 #                          dictionary = text_dict)
 # )
-text_total_freq_all <- readRDS(file.path(analyses_dir, "text_total_frequencies.Rdata"))
+text_total_freq_all <- readRDS(file.path(analyses_dir, "text_total_frequencies.rds"))
 sentiments          <- get_sentiments(lexicon = "bing")
 
 # - merge word_frequencies with sentiment lists
